@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scratch 期末測驗系統</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="login-box">
+            <h1>🎮 Scratch 期末測驗</h1>
+            <p class="subtitle">歡迎參加本學期 Scratch 程式設計期末測驗</p>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="studentClass">班級</label>
+                    <select id="studentClass" required>
+                        <option value="">請選擇班級</option>
+                        <option value="五年一班">五年一班</option>
+                        <option value="五年二班">五年二班</option>
+                        <option value="五年三班">五年三班</option>
+                        <option value="五年四班">五年四班</option>
+                        <option value="五年五班">五年五班</option>
+                        <option value="五年六班">五年六班</option>
+                        <option value="五年七班">五年七班</option>
+                        <option value="五年八班">五年八班</option>
+                        <option value="五年九班">五年九班</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="studentNumber">座號</label>
+                    <input type="number" id="studentNumber" placeholder="請輸入座號" min="1" max="40" required>
+                </div>
+                
+                <button type="submit" class="btn-primary">開始測驗</button>
+            </form>
+            
+            <div class="info-section">
+                <h3>測驗說明</h3>
+                <ul>
+                    <li>📝 第一部分：程式知識測驗（24題選擇題）</li>
+                    <li>⌨️ 第二部分：中文打字測驗（8分鐘）</li>
+                    <li>🏆 完成後可查看班級和校園排行榜</li>
+                    <li>⚠️ 請確保網路連線穩定</li>
+                </ul>
+            </div>
+            
+            <div class="footer-links">
+                <a href="leaderboard.html">查看排行榜</a>
+                <a href="admin.html" style="opacity: 0.3;">管理後台</a>
+            </div>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, set } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        import { firebaseConfig } from './js/firebase-config.js';
+        
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const studentData = {
+                name: `${document.getElementById('studentNumber').value}號`,
+                class: document.getElementById('studentClass').value,
+                number: document.getElementById('studentNumber').value,
+                loginTime: new Date().toISOString(),
+                examCompleted: false,
+                typingCompleted: false
+            };
+            
+            // 儲存到 sessionStorage
+            sessionStorage.setItem('studentData', JSON.stringify(studentData));
+            
+            // 跳轉到測驗頁面
+            window.location.href = 'exam.html';
+        });
+    </script>
+</body>
+</html>

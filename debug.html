@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>Debug Test</title>
+</head>
+<body>
+    <h1>題目載入測試</h1>
+    <div id="status">載入中...</div>
+    <div id="result"></div>
+    
+    <script>
+        const statusDiv = document.getElementById('status');
+        const resultDiv = document.getElementById('result');
+        
+        console.log('開始載入題目...');
+        statusDiv.textContent = '正在載入題目...';
+        
+        fetch('data/questions.json')
+            .then(response => {
+                console.log('Response status:', response.status);
+                statusDiv.textContent = `Response status: ${response.status}`;
+                return response.json();
+            })
+            .then(data => {
+                console.log('題目數量:', data.length);
+                console.log('第一題:', data[0]);
+                statusDiv.textContent = '✓ 載入成功！';
+                resultDiv.innerHTML = `
+                    <h2>載入成功！</h2>
+                    <p>共 ${data.length} 題</p>
+                    <h3>第一題：</h3>
+                    <pre>${JSON.stringify(data[0], null, 2)}</pre>
+                `;
+            })
+            .catch(error => {
+                console.error('錯誤:', error);
+                statusDiv.textContent = '✗ 載入失敗！';
+                resultDiv.innerHTML = `<p style="color: red;">錯誤: ${error.message}</p>`;
+            });
+    </script>
+</body>
+</html>
