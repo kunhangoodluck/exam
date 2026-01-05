@@ -349,7 +349,17 @@
         
         // 隨機選擇一張圖片
         const randomPrize = prizeImages[Math.floor(Math.random() * prizeImages.length)];
-        document.getElementById('prizeImage').src = `images/prizes/${randomPrize}`;
+        const prizeImg = document.getElementById('prizeImage');
+        prizeImg.src = `images/prizes/${randomPrize}`;
+        
+        // 圖片載入錯誤處理
+        prizeImg.onerror = function() {
+            console.error('圖片載入失敗:', this.src);
+            this.alt = '🎁 恭喜完成測驗！';
+            this.style.display = 'none';
+            const container = document.querySelector('.prize-image-container');
+            container.innerHTML = '<div style="font-size: 120px; padding: 50px;">🎁</div><p style="font-size: 24px; color: #666;">恭喜完成測驗！</p>';
+        };
         
         // 生成彩紙效果
         const confettiContainer = document.getElementById('confetti');
@@ -370,12 +380,14 @@
         
         if (studentData.examResult && studentData.typingResult) {
             // Scratch 測驗成績
+            const examScore = Math.round(studentData.examResult.score || 0);
             document.getElementById('examScore').innerHTML = 
-                `${studentData.examResult.score}<span class="score-unit">分</span>`;
+                `${examScore}<span class="score-unit">分</span>`;
             
-            // 打字綜合分數
+            // 打字綜合分數 - 修正格式化
+            const typingScore = Math.round(studentData.typingResult.overallScore || 0);
             document.getElementById('typingScore').innerHTML = 
-                `${studentData.typingResult.overallScore}<span class="score-unit">分</span>`;
+                `${typingScore}<span class="score-unit">分</span>`;
             
             // 顯示之王徽章
             const topCategory = studentData.typingResult.topCategory;
@@ -390,19 +402,28 @@
                     `<div class="badge badge-king">👑 ${categoryNames[topCategory]}之王</div>`;
             }
             
-            // 打字詳細資料
-            document.getElementById('completionRate').textContent = 
-                `${studentData.typingResult.completionRate}%`;
-            document.getElementById('accuracy').textContent = 
-                `${studentData.typingResult.accuracy}%`;
+            // 打字詳細資料 - 確保格式化
+            const completionRate = parseFloat(studentData.typingResult.completionRate || 0).toFixed(1);
+            const accuracy = parseFloat(studentData.typingResult.accuracy || 0).toFixed(1);
+            const wpm = Math.round(studentData.typingResult.wpm || 0);
+            const rounds = Math.round(studentData.typingResult.rounds || 0);
+            const totalChars = Math.round(studentData.typingResult.totalChars || 0);
+            const errors = parseFloat(studentData.typingResult.errors || 0).toFixed(1);
+            
+            document.getElementById('completionRate').textContent = `${completionRate}%`;
+            document.getElementById('accuracy').textContent = `${accuracy}%`;
             document.getElementById('wpm').innerHTML = 
-                `${studentData.typingResult.wpm}<span style="font-size:14px"> 字/分</span>`;
+                `${wpm}<span style="font-size:14px"> 字/分</span>`;
             document.getElementById('rounds').innerHTML = 
-                `${studentData.typingResult.rounds}<span style="font-size:14px"> 輪</span>`;
+                `${rounds}<span style="font-size:14px"> 輪</span>`;
             document.getElementById('totalChars').innerHTML = 
-                `${studentData.typingResult.totalChars}<span style="font-size:14px"> 字</span>`;
+                `${totalChars}<span style="font-size:14px"> 字</span>`;
             document.getElementById('errors').innerHTML = 
-                `${studentData.typingResult.errors}<span style="font-size:14px"> 字</span>`;
+                `${errors}<span style="font-size:14px"> 字</span>`;
+        } else {
+            // 沒有資料時顯示錯誤訊息
+            console.error('找不到學生資料');
+            alert('找不到測驗資料，請重新測驗');
         }
     </script>
 </body>
