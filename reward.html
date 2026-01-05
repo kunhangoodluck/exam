@@ -335,22 +335,44 @@
     </div>
     
     <script>
-        // 隨機選擇獎勵圖片
+        // 隨機選擇獎勵圖片（使用圖床連結）
         const prizeImages = [
-            'prize-圖片-0.jpg', 'prize-圖片-1.jpg', 'prize-圖片-2.jpg', 'prize-圖片-3.jpg',
-            'prize-圖片-4.jpg', 'prize-圖片-5.jpg', 'prize-圖片-6.jpg', 'prize-圖片-7.jpg',
-            'prize-圖片-8.jpg', 'prize-圖片-9.jpg', 'prize-圖片-10.jpg', 'prize-圖片-11.jpg',
-            'prize-圖片-12.jpg', 'prize-圖片-13.jpg', 'prize-圖片-14.jpg', 'prize-圖片-15.jpg',
-            'prize-圖片-16.jpg', 'prize-圖片-17.jpg', 'prize-圖片-18.jpg', 'prize-圖片-19.jpg',
-            'prize-圖片-21.jpg', 'prize-圖片-22.jpg', 'prize-圖片-23.jpg', 'prize-圖片-24.jpg',
-            'prize-圖片-25.jpg', 'prize-圖片-26.jpg', 'prize-圖片-27.jpg', 'prize-圖片-28.jpg',
-            'prize-圖片-29.jpg'
+            'https://i.postimg.cc/Dw5W95qJ/prize-tu-pian-0.jpg',
+            'https://i.postimg.cc/3x9ys9gW/prize-tu-pian-1.jpg',
+            'https://i.postimg.cc/y8nJMnFk/prize-tu-pian-2.jpg',
+            'https://i.postimg.cc/W1SDBSM3/prize-tu-pian-3.jpg',
+            'https://i.postimg.cc/XYnG1tyF/prize-tu-pian-4.jpg',
+            'https://i.postimg.cc/rwq0Z7t5/prize-tu-pian-5.jpg',
+            'https://i.postimg.cc/RZv6p2nn/prize-tu-pian-6.jpg',
+            'https://i.postimg.cc/P5dpV08w/prize-tu-pian-7.jpg',
+            'https://i.postimg.cc/4xX72jhn/prize-tu-pian-8.jpg',
+            'https://i.postimg.cc/dVJkNgTh/prize-tu-pian-9.jpg',
+            'https://i.postimg.cc/BnJL7R1S/prize-tu-pian-10.jpg',
+            'https://i.postimg.cc/HkTcvF7L/prize-tu-pian-11.jpg',
+            'https://i.postimg.cc/rwq0Z7tF/prize-tu-pian-12.jpg',
+            'https://i.postimg.cc/zGqb24Rq/prize-tu-pian-13.jpg',
+            'https://i.postimg.cc/MpzM3gjw/prize-tu-pian-14.jpg',
+            'https://i.postimg.cc/0y9MXhJs/prize-tu-pian-15.jpg',
+            'https://i.postimg.cc/HkTcvF7C/prize-tu-pian-16.jpg',
+            'https://i.postimg.cc/rwq0Z7t2/prize-tu-pian-17.jpg',
+            'https://i.postimg.cc/x19JpBNw/prize-tu-pian-18.jpg',
+            'https://i.postimg.cc/6pB2bF4g/prize-tu-pian-19.jpg',
+            'https://i.postimg.cc/CxwBr9nW/prize-tu-pian-20.jpg',
+            'https://i.postimg.cc/65r40BT9/prize-tu-pian-21.jpg',
+            'https://i.postimg.cc/fTcSKMks/prize-tu-pian-22.jpg',
+            'https://i.postimg.cc/X7fB8nX0/prize-tu-pian-23.jpg',
+            'https://i.postimg.cc/hPLQrKhg/prize-tu-pian-24.jpg',
+            'https://i.postimg.cc/3JX0B3WT/prize-tu-pian-25.jpg',
+            'https://i.postimg.cc/zXCHjqv9/prize-tu-pian-26.jpg',
+            'https://i.postimg.cc/ZK8vcJ0k/prize-tu-pian-27.jpg',
+            'https://i.postimg.cc/TYV59T1B/prize-tu-pian-28.jpg',
+            'https://i.postimg.cc/nc49knry/prize-tu-pian-29.jpg'
         ];
         
-        // 隨機選擇一張圖片
+        // 隨機選擇一張圖片（直接使用圖床URL）
         const randomPrize = prizeImages[Math.floor(Math.random() * prizeImages.length)];
         const prizeImg = document.getElementById('prizeImage');
-        prizeImg.src = `images/prizes/${randomPrize}`;
+        prizeImg.src = randomPrize;
         
         // 圖片載入錯誤處理
         prizeImg.onerror = function() {
