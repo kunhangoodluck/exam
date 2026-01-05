@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>程式知識測驗 - Scratch 期末測驗</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .question-image {
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+            margin: 20px auto;
+            display: block;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .timer-warning {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            color: #856404;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+        
+        .timer-warning.show {
+            display: block;
+            animation: pulse 1s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        
+        .question-card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        
+        .option {
+            padding: 20px;
+            margin: 12px 0;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            font-size: 18px;
+        }
+        
+        .option:hover {
+            border-color: #FF6B35;
+            background: #fff5f2;
+        }
+        
+        .option.selected {
+            border-color: #FF6B35;
+            background: #fff0eb;
+        }
+        
+        .option input[type="radio"] {
+            width: 24px;
+            height: 24px;
+            margin-right: 15px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="exam-container fade-in">
+            <div class="exam-header">
+                <div>
+                    <h1>📝 Scratch 程式知識測驗</h1>
+                    <p id="studentInfo" class="subtitle"></p>
+                </div>
+                <div class="exam-progress">
+                    <span id="questionCounter">題目 1/24</span>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="timer-warning" id="timerWarning">
+                ⏱️ 請仔細閱讀題目，還需要 <span id="remainingTime">5</span> 秒才能進入下一題
+            </div>
+            
+            <div id="questionContainer">
+                <!-- 題目會動態載入 -->
+            </div>
+            
+            <div class="navigation-buttons">
+                <button id="prevBtn" class="btn-secondary" style="display: none;">上一題</button>
+                <div style="flex: 1;"></div>
+                <button id="nextBtn" class="btn-primary" disabled>下一題</button>
+                <button id="submitBtn" class="btn-submit" style="display: none;">完成測驗</button>
+            </div>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, set } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        import { firebaseConfig } from './js/firebase-config.js';
+        
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        
+        // 檢查登入狀態
+        const studentData = JSON.parse(sessionStorage.getItem('studentData'));
+        if (!studentData) {
+            alert('請先登入！');
+            window.location.href = 'index.html';
+        }
+        
+        document.getElementById('studentInfo').textContent = 
+            `${studentData.class} ${studentData.number}號`;
+        
+        // 測驗設定
+        const MIN_ANSWER_TIME = 5; // 最低答題時間（秒）
+        let questions = [];
+        let currentQuestion = 0;
+        let answers = {};
+        let questionStartTime = 0;
+        let timerInterval = null;
+        
+        // 載入題目
+        fetch('data/questions.json')
+            .then(response => response.json())
+            .then(data => {
+                questions = data;
+                showQuestion(0);
+            })
+            .catch(error => {
+                console.error('載入題目失敗:', error);
+                alert('載入題目失敗，請重新整理頁面');
+            });
+        
+        function showQuestion(index) {
+            currentQuestion = index;
+            const question = questions[index];
+            
+            // 確保介面元素可見
+            const container = document.getElementById('questionContainer');
+            const timerWarning = document.getElementById('timerWarning');
+            const navButtons = document.querySelector('.navigation-buttons');
+            
+            if (container) container.style.display = 'block';
+            if (navButtons) navButtons.style.display = 'flex';
+            
+            // 記錄開始時間
+            questionStartTime = Date.now();
+            
+            // 重置計時器
+            startTimer();
+            
+            // 更新進度
+            document.getElementById('questionCounter').textContent = 
+                `題目 ${index + 1}/${questions.length}`;
+            document.getElementById('progressFill').style.width = 
+                `${((index + 1) / questions.length) * 100}%`;
+            
+            // 顯示題目
+            container.innerHTML = `
+                <div class="question-navigator" style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                    <div style="font-size: 14px; color: #666; margin-bottom: 12px; font-weight: bold;">📋 題目列表（點擊可快速跳題）</div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 10px;">
+                        ${questions.map((q, idx) => {
+                            const answered = answers[q.id] !== undefined;
+                            const isCurrent = idx === index;
+                            let bgColor = '#f5f5f5';
+                            let borderColor = '#ddd';
+                            let textColor = '#666';
+                            
+                            if (isCurrent) {
+                                bgColor = '#FF6B35';
+                                borderColor = '#FF6B35';
+                                textColor = 'white';
+                            } else if (answered) {
+                                bgColor = '#e3f2fd';
+                                borderColor = '#2196f3';
+                                textColor = '#1565c0';
+                            }
+                            
+                            return `
+                                <button onclick="jumpToQuestion(${idx})" style="
+                                    background: ${bgColor};
+                                    border: 2px solid ${borderColor};
+                                    padding: 10px;
+                                    border-radius: 6px;
+                                    cursor: pointer;
+                                    transition: all 0.2s;
+                                    font-size: 14px;
+                                    font-weight: bold;
+                                    color: ${textColor};
+                                " onmouseover="if(!${isCurrent}) { this.style.transform='scale(1.1)'; this.style.borderColor='#FF6B35'; }" onmouseout="if(!${isCurrent}) { this.style.transform='scale(1)'; this.style.borderColor='${borderColor}'; }">
+                                    ${answered && !isCurrent ? '✓' : ''} ${q.id}
+                                </button>
+                            `;
+                        }).join('')}
+                    </div>
+                    <div style="margin-top: 12px; font-size: 12px; color: #999;">
+                        <span style="display: inline-block; margin-right: 15px;">
+                            <span style="display: inline-block; width: 12px; height: 12px; background: #FF6B35; border-radius: 3px; margin-right: 5px; vertical-align: middle;"></span>
+                            當前題目
+                        </span>
+                        <span style="display: inline-block; margin-right: 15px;">
+                            <span style="display: inline-block; width: 12px; height: 12px; background: #e3f2fd; border: 2px solid #2196f3; border-radius: 3px; margin-right: 5px; vertical-align: middle;"></span>
+                            已作答
+                        </span>
+                        <span style="display: inline-block;">
+                            <span style="display: inline-block; width: 12px; height: 12px; background: #f5f5f5; border: 2px solid #ddd; border-radius: 3px; margin-right: 5px; vertical-align: middle;"></span>
+                            未作答
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="question-card">
+                    <div class="question-number">第 ${index + 1} 題</div>
+                    <div class="question-text">${question.question}</div>
+                    ${question.image ? `<img src="images/${question.image}" class="question-image" alt="題目圖片">` : ''}
+                    <div class="options">
+                        ${question.options.map((option, i) => `
+                            <label class="option ${answers[question.id] === i ? 'selected' : ''}">
+                                <input type="radio" 
+                                       name="question${question.id}" 
+                                       value="${i}"
+                                       ${answers[question.id] === i ? 'checked' : ''}
+                                       onchange="selectAnswer(${question.id}, ${i})">
+                                <span>${option}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            
+            // 更新按鈕狀態
+            updateNavigationButtons();
+        }
+        
+        function startTimer() {
+            let timeLeft = MIN_ANSWER_TIME;
+            const nextBtn = document.getElementById('nextBtn');
+            const submitBtn = document.getElementById('submitBtn');
+            const btnTimer = document.getElementById('btnTimer');
+            const remainingTime = document.getElementById('remainingTime');
+            const timerWarning = document.getElementById('timerWarning');
+            
+            // 禁用按鈕
+            nextBtn.disabled = true;
+            submitBtn.disabled = true;
+            
+            // 顯示警告
+            timerWarning.classList.add('show');
+            
+            // 清除舊的計時器
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+            
+            // 更新計時器顯示
+            if (currentQuestion === questions.length - 1) {
+                submitBtn.innerHTML = `完成測驗 (<span id="btnTimer">${timeLeft}</span>秒)`;
+            } else {
+                nextBtn.innerHTML = `下一題 (<span id="btnTimer">${timeLeft}</span>秒)`;
+            }
+            remainingTime.textContent = timeLeft;
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                
+                // 更新顯示
+                const currentBtnTimer = document.getElementById('btnTimer');
+                if (currentBtnTimer) {
+                    currentBtnTimer.textContent = timeLeft;
+                }
+                remainingTime.textContent = timeLeft;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    nextBtn.disabled = false;
+                    submitBtn.disabled = false;
+                    
+                    // 恢復按鈕文字
+                    if (currentQuestion === questions.length - 1) {
+                        submitBtn.innerHTML = '完成測驗';
+                    } else {
+                        nextBtn.innerHTML = '下一題';
+                    }
+                    
+                    timerWarning.classList.remove('show');
+                }
+            }, 1000);
+        }
+        
+        window.selectAnswer = function(questionId, optionIndex) {
+            answers[questionId] = optionIndex;
+            
+            // 更新選項樣式
+            document.querySelectorAll('.option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            event.target.closest('.option').classList.add('selected');
+        };
+        
+        // 跳到指定題目
+        window.jumpToQuestion = function(index) {
+            // 清除計時器
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+            showQuestion(index);
+        };
+        
+        function updateNavigationButtons() {
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            // 上一題按鈕
+            if (currentQuestion > 0) {
+                prevBtn.style.display = 'block';
+            } else {
+                prevBtn.style.display = 'none';
+            }
+            
+            // 下一題 / 完成按鈕
+            if (currentQuestion === questions.length - 1) {
+                nextBtn.style.display = 'none';
+                submitBtn.style.display = 'block';
+            } else {
+                nextBtn.style.display = 'block';
+                submitBtn.style.display = 'none';
+            }
+        }
+        
+        // 上一題
+        document.getElementById('prevBtn').addEventListener('click', () => {
+            if (currentQuestion > 0) {
+                // 清除計時器
+                if (timerInterval) {
+                    clearInterval(timerInterval);
+                }
+                showQuestion(currentQuestion - 1);
+            }
+        });
+        
+        // 下一題
+        document.getElementById('nextBtn').addEventListener('click', () => {
+            if (currentQuestion < questions.length - 1) {
+                // 清除計時器
+                if (timerInterval) {
+                    clearInterval(timerInterval);
+                }
+                showQuestion(currentQuestion + 1);
+            }
+        });
+        
+        // 完成測驗
+        document.getElementById('submitBtn').addEventListener('click', () => {
+            showReviewPage();
+        });
+        
+        // 顯示答題檢查頁面
+        function showReviewPage() {
+            // 清除計時器
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+            
+            // 隱藏題目和按鈕（不刪除，只是隱藏）
+            document.getElementById('questionContainer').style.display = 'none';
+            document.getElementById('timerWarning').style.display = 'none';
+            document.querySelector('.navigation-buttons').style.display = 'none';
+            document.querySelector('.exam-header').style.display = 'none';
+            
+            // 統計作答情況（不計算對錯）
+            const answeredCount = questions.filter(q => answers[q.id] !== undefined).length;
+            const unansweredCount = questions.length - answeredCount;
+            
+            // 建立詳細結果（考試結束後才計算對錯）
+            const detailedResults = [];
+            questions.forEach(q => {
+                const userAnswer = answers[q.id];
+                detailedResults.push({
+                    questionId: q.id,
+                    question: q.question,
+                    userAnswer: userAnswer !== undefined ? userAnswer : null,
+                    correctAnswer: q.correctAnswer,
+                    answered: userAnswer !== undefined
+                });
+            });
+            
+            // 建立或更新檢查頁面
+            let reviewContainer = document.getElementById('reviewContainer');
+            if (!reviewContainer) {
+                reviewContainer = document.createElement('div');
+                reviewContainer.id = 'reviewContainer';
+                document.querySelector('.exam-container').appendChild(reviewContainer);
+            }
+            
+            reviewContainer.style.display = 'block';
+            reviewContainer.innerHTML = `
+                <div class="review-content" style="padding: 30px;">
+                    <h1 style="text-align: center; color: var(--primary-color); margin-bottom: 20px;">
+                        📋 答題檢查
+                    </h1>
+                    
+                    <div class="score-summary" style="background: white; padding: 30px; border-radius: 12px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; text-align: center;">
+                            <div>
+                                <div style="font-size: 14px; color: #666; margin-bottom: 5px;">已作答題數</div>
+                                <div style="font-size: 36px; font-weight: bold; color: #4caf50;">${answeredCount} / ${questions.length}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 14px; color: #666; margin-bottom: 5px;">未作答題數</div>
+                                <div style="font-size: 36px; font-weight: bold; color: ${unansweredCount > 0 ? '#f44336' : '#4caf50'};">${unansweredCount} 題</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 14px; color: #666; margin-bottom: 5px;">完成度</div>
+                                <div style="font-size: 36px; font-weight: bold; color: #FF6B35;">${Math.round(answeredCount / questions.length * 100)}%</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+                        <p style="margin: 0; color: #856404;">💡 提示：可以點擊題號快速跳到該題補答或修改答案</p>
+                    </div>
+                    
+                    <div class="question-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px; margin-bottom: 30px;">
+                        ${questions.map(q => {
+                            const answered = answers[q.id] !== undefined;
+                            let bgColor = answered ? '#e3f2fd' : '#f5f5f5';
+                            let textColor = answered ? '#1565c0' : '#666';
+                            let borderColor = answered ? '#2196f3' : '#ddd';
+                            let icon = answered ? '✓' : '?';
+                            
+                            return `
+                                <button onclick="goToQuestionFromReview(${q.id - 1})" style="
+                                    background: ${bgColor};
+                                    border: 2px solid ${borderColor};
+                                    padding: 15px;
+                                    border-radius: 8px;
+                                    cursor: pointer;
+                                    transition: all 0.3s;
+                                    font-size: 16px;
+                                    font-weight: bold;
+                                    color: ${textColor};
+                                " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                    ${icon} 第 ${q.id} 題
+                                </button>
+                            `;
+                        }).join('')}
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <button onclick="continueExam()" class="btn-secondary" style="margin-right: 15px; padding: 15px 40px; font-size: 18px;">
+                            ← 繼續作答
+                        </button>
+                        <button onclick="submitFinalExam()" class="btn-submit" style="padding: 15px 40px; font-size: 18px;">
+                            ${unansweredCount > 0 ? '確定交卷（有未作答題目）' : '確定交卷'} →
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // 將詳細結果存到全域變數
+            window.detailedResults = detailedResults;
+        }
+        
+        // 從檢查頁面跳到指定題目
+        window.goToQuestionFromReview = function(index) {
+            // 隱藏檢查頁面
+            const reviewContainer = document.getElementById('reviewContainer');
+            if (reviewContainer) {
+                reviewContainer.style.display = 'none';
+            }
+            
+            // 顯示原始介面
+            document.querySelector('.exam-header').style.display = 'flex';
+            
+            // 跳到指定題目
+            showQuestion(index);
+        };
+        
+        // 跳到指定題目（從題目列表）
+        window.jumpToQuestion = function(index) {
+            // 清除計時器
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+            showQuestion(index);
+        };
+        
+        // 繼續作答
+        window.continueExam = function() {
+            // 隱藏檢查頁面
+            const reviewContainer = document.getElementById('reviewContainer');
+            if (reviewContainer) {
+                reviewContainer.style.display = 'none';
+            }
+            
+            // 顯示原始介面
+            document.querySelector('.exam-header').style.display = 'flex';
+            
+            // 回到當前題目
+            showQuestion(currentQuestion);
+        };
+        
+        // 最終提交
+        window.submitFinalExam = async function() {
+            const unanswered = questions.filter(q => answers[q.id] === undefined);
+            
+            if (unanswered.length > 0) {
+                const confirmSubmit = confirm(`還有 ${unanswered.length} 題未作答，確定要交卷嗎？`);
+                if (!confirmSubmit) return;
+            }
+            
+            // 計算成績（在提交時才計算）
+            let correctCount = 0;
+            const detailedResults = [];
+            
+            questions.forEach(q => {
+                const userAnswer = answers[q.id];
+                const isCorrect = userAnswer === q.correctAnswer;
+                if (isCorrect) correctCount++;
+                
+                detailedResults.push({
+                    questionId: q.id,
+                    question: q.question,
+                    userAnswer: userAnswer !== undefined ? userAnswer : null,
+                    correctAnswer: q.correctAnswer,
+                    isCorrect: isCorrect,
+                    answered: userAnswer !== undefined
+                });
+            });
+            
+            const score = Math.round((correctCount / questions.length) * 100);
+            
+            // 儲存測驗結果（包含詳細答題記錄）
+            studentData.examResult = {
+                answers: answers,
+                detailedResults: detailedResults,
+                correctCount: correctCount,
+                totalQuestions: questions.length,
+                score: score,
+                completedTime: new Date().toISOString()
+            };
+            
+            sessionStorage.setItem('studentData', JSON.stringify(studentData));
+            
+            // 儲存到 Firebase
+            const studentKey = `${studentData.class}_${studentData.number}_${studentData.name}`;
+            try {
+                await set(ref(database, `exams/${studentKey}`), {
+                    name: studentData.name,
+                    class: studentData.class,
+                    number: studentData.number,
+                    examResult: studentData.examResult,
+                    loginTime: studentData.loginTime
+                });
+                
+                // 跳轉到打字測驗
+                alert(`測驗完成！\n答對 ${correctCount} 題，共 ${questions.length} 題\n成績：${score} 分`);
+                window.location.href = 'typing.html';
+            } catch (error) {
+                console.error('儲存失敗:', error);
+                alert('儲存成績時發生錯誤，請聯絡老師');
+            }
+        };
+        
+        // 檢查是否需要跳到指定題目
+        const jumpTo = sessionStorage.getItem('jumpToQuestion');
+        if (jumpTo !== null) {
+            sessionStorage.removeItem('jumpToQuestion');
+            setTimeout(() => {
+                showQuestion(parseInt(jumpTo));
+            }, 100);
+        }
+    </script>
+</body>
+</html>

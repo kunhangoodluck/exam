@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase 連線測試</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft JhengHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #FF6B35;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+        
+        .test-section h2 {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        button {
+            width: 100%;
+            padding: 15px;
+            background: #FF6B35;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-bottom: 10px;
+        }
+        
+        button:hover {
+            background: #e55a2b;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            display: block;
+        }
+        
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            display: block;
+        }
+        
+        .result.info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+            display: block;
+        }
+        
+        .status-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .status-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+        
+        .status-badge.success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .status-badge.error {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .status-badge.pending {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .config-info {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+        
+        .config-info p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔥 Firebase 連線測試</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 30px;">
+            Scratch 期末測驗系統 - 資料庫連線檢測
+        </p>
+        
+        <!-- 配置資訊 -->
+        <div class="test-section">
+            <h2>📋 Firebase 配置資訊</h2>
+            <div class="config-info">
+                <p><strong>專案 ID:</strong> <code>scratch-exam</code></p>
+                <p><strong>Database URL:</strong> <code>https://scratch-exam-default-rtdb.firebaseio.com</code></p>
+                <p><strong>區域:</strong> 預設（需要確認）</p>
+            </div>
+        </div>
+        
+        <!-- 測試項目 -->
+        <div class="test-section">
+            <h2>🧪 連線測試</h2>
+            
+            <button onclick="runAllTests()" id="testBtn">開始測試</button>
+            
+            <div id="statusContainer" style="display: none; margin-top: 20px;">
+                <div class="status-item">
+                    <span>1. Firebase SDK 載入</span>
+                    <span class="status-badge pending" id="status1">待測試</span>
+                </div>
+                <div class="status-item">
+                    <span>2. 初始化 Firebase App</span>
+                    <span class="status-badge pending" id="status2">待測試</span>
+                </div>
+                <div class="status-item">
+                    <span>3. 連線 Realtime Database</span>
+                    <span class="status-badge pending" id="status3">待測試</span>
+                </div>
+                <div class="status-item">
+                    <span>4. 寫入測試資料</span>
+                    <span class="status-badge pending" id="status4">待測試</span>
+                </div>
+                <div class="status-item">
+                    <span>5. 讀取測試資料</span>
+                    <span class="status-badge pending" id="status5">待測試</span>
+                </div>
+            </div>
+            
+            <div id="testResult" class="result"></div>
+        </div>
+        
+        <!-- 手動測試 -->
+        <div class="test-section">
+            <h2>✍️ 手動測試</h2>
+            <input type="text" id="testMessage" placeholder="輸入測試訊息" 
+                   style="width: 100%; padding: 10px; margin-bottom: 10px; border: 2px solid #ddd; border-radius: 4px;">
+            <button onclick="manualTest()">寫入測試資料</button>
+            <div id="manualResult" class="result"></div>
+        </div>
+        
+        <!-- 清除測試資料 -->
+        <div class="test-section">
+            <h2>🗑️ 清除測試資料</h2>
+            <button onclick="clearTestData()" style="background: #dc3545;">清除所有測試資料</button>
+            <div id="clearResult" class="result"></div>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, set, get, remove, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyDjmZsRv5G7V9JQkW77oFZoZiqj1mcdRIQ",
+            authDomain: "scratch-exam.firebaseapp.com",
+            databaseURL: "https://scratch-exam-default-rtdb.firebaseio.com",
+            projectId: "scratch-exam",
+            storageBucket: "scratch-exam.firebasestorage.app",
+            messagingSenderId: "880157817156",
+            appId: "1:880157817156:web:cf05f57ea8101865857f11",
+            measurementId: "G-7BN8BRYJJV"
+        };
+        
+        let app, database;
+        
+        function updateStatus(id, status, text) {
+            const badge = document.getElementById(id);
+            badge.className = 'status-badge ' + status;
+            badge.textContent = text;
+        }
+        
+        function showResult(elementId, type, message) {
+            const result = document.getElementById(elementId);
+            result.className = 'result ' + type;
+            result.innerHTML = message;
+        }
+        
+        window.runAllTests = async function() {
+            const btn = document.getElementById('testBtn');
+            btn.disabled = true;
+            btn.textContent = '測試中...';
+            
+            document.getElementById('statusContainer').style.display = 'block';
+            document.getElementById('testResult').style.display = 'none';
+            
+            try {
+                // 測試 1: SDK 載入
+                updateStatus('status1', 'pending', '測試中...');
+                await new Promise(resolve => setTimeout(resolve, 500));
+                updateStatus('status1', 'success', '✓ 成功');
+                
+                // 測試 2: 初始化
+                updateStatus('status2', 'pending', '測試中...');
+                app = initializeApp(firebaseConfig);
+                await new Promise(resolve => setTimeout(resolve, 500));
+                updateStatus('status2', 'success', '✓ 成功');
+                
+                // 測試 3: 連線資料庫
+                updateStatus('status3', 'pending', '測試中...');
+                database = getDatabase(app);
+                await new Promise(resolve => setTimeout(resolve, 500));
+                updateStatus('status3', 'success', '✓ 成功');
+                
+                // 測試 4: 寫入資料
+                updateStatus('status4', 'pending', '測試中...');
+                const testData = {
+                    message: 'Firebase 連線測試成功！',
+                    timestamp: new Date().toISOString(),
+                    testNumber: Math.floor(Math.random() * 1000)
+                };
+                await set(ref(database, 'test/connection'), testData);
+                await new Promise(resolve => setTimeout(resolve, 500));
+                updateStatus('status4', 'success', '✓ 成功');
+                
+                // 測試 5: 讀取資料
+                updateStatus('status5', 'pending', '測試中...');
+                const snapshot = await get(ref(database, 'test/connection'));
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    updateStatus('status5', 'success', '✓ 成功');
+                    
+                    showResult('testResult', 'success', `
+                        <strong>🎉 所有測試通過！</strong><br>
+                        <p style="margin-top: 10px;">Firebase 已成功連線並可正常讀寫資料。</p>
+                        <p style="margin-top: 10px; font-size: 0.9em;">
+                            <strong>讀取到的測試資料：</strong><br>
+                            訊息：${data.message}<br>
+                            時間：${new Date(data.timestamp).toLocaleString('zh-TW')}<br>
+                            測試編號：${data.testNumber}
+                        </p>
+                    `);
+                } else {
+                    updateStatus('status5', 'error', '✗ 失敗');
+                    showResult('testResult', 'error', '❌ 無法讀取資料');
+                }
+                
+            } catch (error) {
+                console.error('測試失敗:', error);
+                
+                // 找出失敗的步驟
+                if (!app) {
+                    updateStatus('status2', 'error', '✗ 失敗');
+                }
+                if (!database) {
+                    updateStatus('status3', 'error', '✗ 失敗');
+                }
+                
+                showResult('testResult', 'error', `
+                    <strong>❌ 測試失敗</strong><br>
+                    <p style="margin-top: 10px;">錯誤訊息：${error.message}</p>
+                    <p style="margin-top: 10px; font-size: 0.9em;">
+                        <strong>可能原因：</strong><br>
+                        1. Realtime Database 尚未啟用<br>
+                        2. 資料庫規則不允許讀寫<br>
+                        3. Database URL 錯誤<br>
+                        4. 網路連線問題
+                    </p>
+                    <p style="margin-top: 10px;">
+                        請查看 <strong>FIREBASE_SETUP.md</strong> 了解詳細設定步驟。
+                    </p>
+                `);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '重新測試';
+            }
+        };
+        
+        window.manualTest = async function() {
+            const message = document.getElementById('testMessage').value;
+            if (!message) {
+                showResult('manualResult', 'error', '❌ 請輸入測試訊息');
+                return;
+            }
+            
+            try {
+                if (!database) {
+                    database = getDatabase(initializeApp(firebaseConfig));
+                }
+                
+                const testData = {
+                    message: message,
+                    timestamp: new Date().toISOString()
+                };
+                
+                await set(ref(database, 'test/manual'), testData);
+                
+                showResult('manualResult', 'success', `
+                    <strong>✓ 資料寫入成功！</strong><br>
+                    <p style="margin-top: 10px;">
+                        你可以到 Firebase Console 查看資料：<br>
+                        路徑：<code>test/manual</code>
+                    </p>
+                `);
+                
+                document.getElementById('testMessage').value = '';
+                
+            } catch (error) {
+                showResult('manualResult', 'error', `❌ 寫入失敗：${error.message}`);
+            }
+        };
+        
+        window.clearTestData = async function() {
+            if (!confirm('確定要清除所有測試資料嗎？')) {
+                return;
+            }
+            
+            try {
+                if (!database) {
+                    database = getDatabase(initializeApp(firebaseConfig));
+                }
+                
+                await remove(ref(database, 'test'));
+                
+                showResult('clearResult', 'success', '✓ 測試資料已清除');
+                
+                setTimeout(() => {
+                    document.getElementById('clearResult').style.display = 'none';
+                }, 3000);
+                
+            } catch (error) {
+                showResult('clearResult', 'error', `❌ 清除失敗：${error.message}`);
+            }
+        };
+        
+        // 頁面載入時的提示
+        window.addEventListener('load', () => {
+            showResult('testResult', 'info', `
+                <strong>📌 開始測試前請確認：</strong><br>
+                <p style="margin-top: 10px;">
+                    1. ✓ Firebase 專案已建立<br>
+                    2. ✓ Realtime Database 已啟用<br>
+                    3. ✓ 資料庫規則已設定（允許讀寫）<br>
+                    4. ✓ 使用本地伺服器或已部署到網路
+                </p>
+                <p style="margin-top: 10px;">
+                    點擊「開始測試」按鈕進行檢測
+                </p>
+            `);
+        });
+    </script>
+</body>
+</html>

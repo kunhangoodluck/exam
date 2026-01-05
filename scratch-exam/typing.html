@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>打字測驗 - Scratch 期末測驗</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .typing-reference {
+            width: 100%;
+            max-width: 1200px;
+            height: auto;
+            margin: 20px auto;
+            display: block;
+            border-radius: 8px;
+        }
+        
+        .typing-input-container {
+            margin: 30px 0;
+        }
+        
+        .typing-input {
+            width: 100%;
+            padding: 20px;
+            font-size: 24px;
+            border: 3px solid #FF6B35;
+            border-radius: 8px;
+            font-family: 'Microsoft JhengHei', sans-serif;
+            line-height: 1.8;
+            min-height: 120px;
+        }
+        
+        .typing-input:focus {
+            outline: none;
+            border-color: #e55a2b;
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #FF6B35;
+        }
+        
+        .stat-unit {
+            font-size: 16px;
+            color: #999;
+            margin-left: 5px;
+        }
+        
+        .timer-display {
+            font-size: 48px;
+            font-weight: bold;
+            color: #FF6B35;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .timer-display.warning {
+            color: #dc3545;
+            animation: blink 1s ease-in-out infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .round-indicator {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .instruction {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .instruction p {
+            margin: 5px 0;
+            color: #1565c0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="typing-container fade-in">
+            <div class="typing-header">
+                <h1>⌨️ 中文打字測驗</h1>
+                <p id="studentInfo" class="subtitle"></p>
+            </div>
+            
+            <div class="timer-display" id="timerDisplay">05:00</div>
+            
+            <div class="round-indicator" id="roundIndicator">
+                第 1 輪 - 《鹿柴》
+            </div>
+            
+            <div class="instruction">
+                <p>📝 請依照下方注音提示，輸入完整的詩句</p>
+                <p>🔄 兩首詩輪流出現：《鹿柴》和《鳥鳴澗》</p>
+                <p>⏎ 打完一首詩後，按 <strong>Enter 鍵</strong>開始下一輪</p>
+                <p>⏱️ 測驗時間：<strong>6 分鐘</strong></p>
+                <p id="elapsedTime" style="font-size: 24px; font-weight: bold; color: #FF6B35; margin-top: 10px;">⏰ 已用時間：00:00</p>
+            </div>
+            
+            <img id="poemImage" src="images/typing-poem1.png" alt="打字參考" class="typing-reference">
+            
+            <div class="typing-input-container">
+                <textarea 
+                    id="typingInput" 
+                    class="typing-input" 
+                    placeholder="請開始打字...（打完後按 Enter 開始下一輪）"
+                    disabled
+                ></textarea>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card" style="grid-column: span 2; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <div class="stat-label" style="color: rgba(255,255,255,0.9);">🏆 綜合分數</div>
+                    <div class="stat-value" style="color: white; font-size: 48px;" id="overallScore">0<span class="stat-unit" style="color: rgba(255,255,255,0.9);">分</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">📝 完成率 <span id="completionBadge"></span></div>
+                    <div class="stat-value" id="completionRate">0<span class="stat-unit">%</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">✓ 正確率 <span id="accuracyBadge"></span></div>
+                    <div class="stat-value" id="accuracy">100<span class="stat-unit">%</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">⚡ 打字速度 <span id="speedBadge"></span></div>
+                    <div class="stat-value" id="wpm">0<span class="stat-unit">字/分</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">完成輪數</div>
+                    <div class="stat-value" id="roundCount">0<span class="stat-unit">輪</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">總打字數</div>
+                    <div class="stat-value" id="totalChars">0<span class="stat-unit">字</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">錯字數</div>
+                    <div class="stat-value" id="errorCount">0<span class="stat-unit">字</span></div>
+                </div>
+            </div>
+            
+            <div class="navigation-buttons">
+                <button id="startBtn" class="btn-primary">開始測驗</button>
+                <button id="submitBtn" class="btn-submit" style="display: none;">提交成績</button>
+            </div>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, set } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        import { firebaseConfig } from './js/firebase-config.js';
+        
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        
+        // 檢查登入狀態
+        const studentData = JSON.parse(sessionStorage.getItem('studentData'));
+        if (!studentData || !studentData.examResult) {
+            alert('請先完成程式測驗！');
+            window.location.href = 'exam.html';
+        }
+        
+        document.getElementById('studentInfo').textContent = 
+            `${studentData.class} ${studentData.number}號`;
+        
+        // 測驗設定
+        const TEST_DURATION = 360; // 6分鐘 = 360秒
+        const POEMS = [
+            '空山不見人，但聞人語響。返景入深林，復照青苔上。',
+            '人閒桂花落，夜靜春山空。月出驚山鳥，時鳴春澗中。'
+        ];
+        let currentPoemIndex = 0;
+        
+        function getCurrentPoem() {
+            return POEMS[currentPoemIndex];
+        }
+        
+        function nextPoem() {
+            currentPoemIndex = (currentPoemIndex + 1) % POEMS.length;
+            return getCurrentPoem();
+        }
+        
+        // 同音字對照表（簡化版，可以擴充）
+        const HOMOPHONE_MAP = {
+            ',': ['，'],  // 英文逗號 vs 中文逗號
+            '，': [','],  // 中文逗號 vs 英文逗號
+            '在': ['再', '載'],
+            '再': ['在', '載'],
+            '的': ['得', '地'],
+            '得': ['的', '地'],
+            '地': ['的', '得'],
+            '做': ['作'],
+            '作': ['做'],
+            '像': ['象'],
+            '象': ['像'],
+            '園': ['圓'],
+            '圓': ['園'],
+            '元': ['原', '園'],
+            '原': ['元'],
+            '現': ['見'],
+            '見': ['現'],
+            '聞': ['文'],
+            '文': ['聞'],
+            '返': ['反'],
+            '反': ['返'],
+            '景': ['影'],
+            '影': ['景'],
+            '復': ['複', '腹'],
+            '複': ['復'],
+            '照': ['找', '召'],
+            '找': ['照'],
+            '召': ['照'],
+            '台': ['苔', '檯'],
+            '苔': ['台', '檯'],
+            '上': ['尚'],
+            '尚': ['上'],
+            '閒': ['間'],
+            '間': ['閒'],
+            '桂': ['貴'],
+            '貴': ['桂'],
+            '花': ['華'],
+            '華': ['花'],
+            '落': ['洛'],
+            '洛': ['落'],
+            '夜': ['也'],
+            '也': ['夜'],
+            '靜': ['淨', '競'],
+            '淨': ['靜'],
+            '競': ['靜'],
+            '春': ['椿'],
+            '椿': ['春'],
+            '山': ['三'],
+            '三': ['山'],
+            '空': ['控'],
+            '控': ['空'],
+            '月': ['越', '悅'],
+            '越': ['月'],
+            '悅': ['月'],
+            '出': ['處'],
+            '處': ['出'],
+            '驚': ['京'],
+            '京': ['驚'],
+            '鳥': ['島'],
+            '島': ['鳥'],
+            '時': ['市', '是'],
+            '市': ['時'],
+            '是': ['時'],
+            '鳴': ['名', '明'],
+            '名': ['鳴'],
+            '明': ['鳴'],
+            '澗': ['間'],
+            '中': ['忠', '終'],
+            '忠': ['中'],
+            '終': ['中']
+        };
+        
+        // 測驗狀態
+        let timeRemaining = TEST_DURATION;
+        let timerInterval = null;
+        let startTime = null;
+        let roundCount = 0;
+        let totalChars = 0;
+        let totalErrors = 0; // 可能是小數（同音字算0.5）
+        let currentRound = 1;
+        let roundCompletionRates = []; // 儲存每輪完成率
+        
+        // 開始測驗
+        document.getElementById('startBtn').addEventListener('click', startTest);
+        
+        let elapsedSeconds = 0;
+        let elapsedTimerInterval = null;
+        
+        function startTest() {
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('submitBtn').style.display = 'block';
+            document.getElementById('typingInput').disabled = false;
+            document.getElementById('typingInput').focus();
+            
+            startTime = Date.now();
+            startTimer();
+            startElapsedTimer(); // 啟動經過時間計時器
+        }
+        
+        // 經過時間計時器
+        function startElapsedTimer() {
+            elapsedSeconds = 0;
+            updateElapsedTimeDisplay();
+            
+            elapsedTimerInterval = setInterval(() => {
+                elapsedSeconds++;
+                updateElapsedTimeDisplay();
+            }, 1000);
+        }
+        
+        function updateElapsedTimeDisplay() {
+            const minutes = Math.floor(elapsedSeconds / 60);
+            const seconds = elapsedSeconds % 60;
+            const timeStr = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            document.getElementById('elapsedTime').textContent = `⏰ 已用時間：${timeStr}`;
+        }
+        
+        function startTimer() {
+            const timerDisplay = document.getElementById('timerDisplay');
+            
+            timerInterval = setInterval(() => {
+                timeRemaining--;
+                
+                const minutes = Math.floor(timeRemaining / 60);
+                const seconds = timeRemaining % 60;
+                timerDisplay.textContent = 
+                    `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                
+                // 最後30秒警告
+                if (timeRemaining <= 30) {
+                    timerDisplay.classList.add('warning');
+                }
+                
+                // 時間到
+                if (timeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    finishTest();
+                }
+                
+                // 更新打字速度
+                updateStats();
+            }, 1000);
+        }
+        
+        // 監聽打字輸入
+        const typingInput = document.getElementById('typingInput');
+        typingInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                checkRound();
+            }
+        });
+        
+        typingInput.addEventListener('input', () => {
+            updateStats();
+        });
+        
+        function checkRound() {
+            const userInput = typingInput.value.trim();
+            
+            if (userInput.length === 0) {
+                return; // 空白不算
+            }
+            
+            // 使用當前的詩句檢查
+            const currentPoem = getCurrentPoem();
+            
+            // 計算這輪的錯誤
+            const errors = calculateErrors(userInput, currentPoem);
+            totalErrors += errors;
+            totalChars += userInput.length;
+            
+            // 計算這輪的完成率
+            const roundRate = calculateRoundCompletionRate(userInput, currentPoem);
+            roundCompletionRates.push(roundRate);
+            
+            roundCount++;
+            currentRound++;
+            
+            // 切換到下一首詩
+            nextPoem();
+            
+            // 更新圖片
+            const poemImage = document.getElementById('poemImage');
+            poemImage.src = `images/typing-poem${currentPoemIndex + 1}.png`;
+            
+            // 更新輪數顯示
+            const poemName = currentPoemIndex === 0 ? '《鹿柴》' : '《鳥鳴澗》';
+            document.getElementById('roundIndicator').textContent = 
+                `第 ${currentRound} 輪 - ${poemName}`;
+            
+            // 清空輸入框
+            typingInput.value = '';
+            
+            // 更新統計
+            updateStats();
+        }
+        
+        function calculateErrors(userText, referenceText) {
+            let errors = 0;
+            const maxLen = Math.max(userText.length, referenceText.length);
+            
+            for (let i = 0; i < maxLen; i++) {
+                const userChar = userText[i] || '';
+                const refChar = referenceText[i] || '';
+                
+                if (userChar !== refChar) {
+                    // 檢查是否為同音字
+                    if (isHomophone(userChar, refChar)) {
+                        errors += 0.5; // 同音字算半個錯字
+                    } else if (userChar !== '') {
+                        errors += 1; // 完全錯字
+                    }
+                }
+            }
+            
+            return errors;
+        }
+        
+        // 計算每輪完成率（基於正確字數）
+        function calculateRoundCompletionRate(userText, referenceText) {
+            let correctScore = 0;
+            const poemLength = 24; // 固定24個字
+            const maxLen = Math.max(userText.length, referenceText.length);
+            
+            for (let i = 0; i < referenceText.length; i++) {
+                const userChar = userText[i] || '';
+                const refChar = referenceText[i] || '';
+                
+                if (userChar === refChar) {
+                    // 完全正確
+                    correctScore += 1;
+                } else if (isHomophone(userChar, refChar)) {
+                    // 同音字或標點錯誤
+                    correctScore += 0.5;
+                }
+                // 完全錯誤或未輸入：+0 分
+            }
+            
+            // 完成率 = (正確分數 / 24) × 100%
+            return (correctScore / poemLength) * 100;
+        }
+        
+        function isHomophone(char1, char2) {
+            if (!char1 || !char2) return false;
+            const homophones = HOMOPHONE_MAP[char2];
+            return homophones && homophones.includes(char1);
+        }
+        
+        function updateStats() {
+            // 計算當前輸入的錯誤（不計入總數，只顯示）
+            const currentInput = typingInput.value;
+            const currentPoem = getCurrentPoem();
+            const currentErrors = calculateErrors(currentInput, currentPoem);
+            
+            // 計算當前輸入的完成率（即時預覽）
+            const currentRoundRate = calculateRoundCompletionRate(currentInput, currentPoem);
+            
+            // 計算總計
+            const displayTotalChars = totalChars + currentInput.length;
+            const displayTotalErrors = totalErrors + currentErrors;
+            
+            // 完成率：所有已完成輪次的平均 + 當前輸入的完成率
+            let avgCompletionRate = 0;
+            if (roundCompletionRates.length > 0 || currentInput.length > 0) {
+                const allRates = [...roundCompletionRates];
+                if (currentInput.length > 0) {
+                    allRates.push(currentRoundRate);
+                }
+                avgCompletionRate = allRates.reduce((sum, rate) => sum + rate, 0) / allRates.length;
+            }
+            
+            // 正確率
+            const accuracy = displayTotalChars > 0 
+                ? ((displayTotalChars - displayTotalErrors) / displayTotalChars * 100)
+                : 100;
+            
+            // 打字速度（字/分鐘）- 只計算正確的字
+            const correctChars = displayTotalChars - displayTotalErrors;
+            const elapsedMinutes = (TEST_DURATION - timeRemaining) / 60;
+            const wpm = elapsedMinutes > 0 
+                ? Math.round(correctChars / elapsedMinutes)
+                : 0;
+            
+            // 速度分數（假設60字/分為滿分100分）
+            const speedScore = Math.min((wpm / 60) * 100, 100);
+            
+            // 綜合分數（方案C：各33.3%）
+            const overallScore = (avgCompletionRate * 0.333 + accuracy * 0.333 + speedScore * 0.333);
+            
+            // 找出最強項（之王）
+            const scores = {
+                completion: avgCompletionRate,
+                accuracy: accuracy,
+                speed: speedScore
+            };
+            const maxScore = Math.max(scores.completion, scores.accuracy, scores.speed);
+            
+            // 清除所有徽章
+            document.getElementById('completionBadge').innerHTML = '';
+            document.getElementById('accuracyBadge').innerHTML = '';
+            document.getElementById('speedBadge').innerHTML = '';
+            
+            // 標示之王（只有當該項 >= 80 才顯示）
+            if (scores.completion === maxScore && scores.completion >= 80) {
+                document.getElementById('completionBadge').innerHTML = '<span style="color: #ffd700; font-size: 16px;">👑</span>';
+            }
+            if (scores.accuracy === maxScore && scores.accuracy >= 80) {
+                document.getElementById('accuracyBadge').innerHTML = '<span style="color: #ffd700; font-size: 16px;">👑</span>';
+            }
+            if (scores.speed === maxScore && scores.speed >= 80) {
+                document.getElementById('speedBadge').innerHTML = '<span style="color: #ffd700; font-size: 16px;">👑</span>';
+            }
+            
+            // 更新顯示
+            document.getElementById('overallScore').innerHTML = 
+                `${overallScore.toFixed(0)}<span class="stat-unit" style="color: rgba(255,255,255,0.9);">分</span>`;
+            document.getElementById('roundCount').innerHTML = 
+                `${roundCount}<span class="stat-unit">輪</span>`;
+            document.getElementById('totalChars').innerHTML = 
+                `${displayTotalChars}<span class="stat-unit">字</span>`;
+            document.getElementById('errorCount').innerHTML = 
+                `${displayTotalErrors.toFixed(1)}<span class="stat-unit">字</span>`;
+            document.getElementById('completionRate').innerHTML = 
+                `${avgCompletionRate.toFixed(1)}<span class="stat-unit">%</span>`;
+            document.getElementById('accuracy').innerHTML = 
+                `${accuracy.toFixed(1)}<span class="stat-unit">%</span>`;
+            document.getElementById('wpm').innerHTML = 
+                `${wpm}<span class="stat-unit">字/分</span>`;
+        }
+        
+        function finishTest() {
+            // 如果還有未提交的文字，先檢查
+            if (typingInput.value.trim().length > 0) {
+                checkRound();
+            }
+            
+            typingInput.disabled = true;
+            
+            // 計算最終統計
+            const correctChars = totalChars - totalErrors;
+            const elapsedMinutes = TEST_DURATION / 60;
+            const finalWPM = Math.round(correctChars / elapsedMinutes);
+            const finalAccuracy = totalChars > 0 
+                ? ((totalChars - totalErrors) / totalChars * 100)
+                : 100;
+            
+            // 計算平均完成率
+            const avgCompletionRate = roundCompletionRates.length > 0
+                ? (roundCompletionRates.reduce((sum, rate) => sum + rate, 0) / roundCompletionRates.length)
+                : 0;
+            
+            // 速度分數（假設60字/分為滿分）
+            const speedScore = Math.min((finalWPM / 60) * 100, 100);
+            
+            // 綜合分數（方案C：各33.3%）
+            const overallScore = (avgCompletionRate * 0.333 + finalAccuracy * 0.333 + speedScore * 0.333);
+            
+            // 找出最強項
+            const scores = {
+                '完成率': avgCompletionRate,
+                '正確率': finalAccuracy,
+                '速度': speedScore
+            };
+            let maxCategory = '';
+            let maxValue = 0;
+            for (let [category, value] of Object.entries(scores)) {
+                if (value > maxValue) {
+                    maxValue = value;
+                    maxCategory = category;
+                }
+            }
+            
+            const kingBadge = maxValue >= 80 ? `\n🏆 ${maxCategory}之王！` : '';
+            
+            // 時間到後自動提交成績
+            submitTypingResult(roundCount, totalChars, totalErrors, avgCompletionRate, finalAccuracy, finalWPM, speedScore, overallScore, maxCategory);
+        }
+        
+        // 提交打字成績函數
+        async function submitTypingResult(rounds, chars, errors, completionRate, accuracy, wpm, speedScore, overallScore, topCategoryName) {
+            // 找出最強項的英文代碼
+            let topCategory = '';
+            const scores = {
+                completion: completionRate,
+                accuracy: accuracy,
+                speed: speedScore
+            };
+            let maxValue = Math.max(scores.completion, scores.accuracy, scores.speed);
+            if (scores.completion === maxValue) topCategory = 'completion';
+            else if (scores.accuracy === maxValue) topCategory = 'accuracy';
+            else topCategory = 'speed';
+            
+            // 儲存打字結果
+            studentData.typingResult = {
+                overallScore: overallScore,
+                topCategory: topCategory,
+                rounds: rounds,
+                totalChars: chars,
+                errors: parseFloat(errors.toFixed(1)),
+                completionRate: completionRate,
+                roundCompletionRates: roundCompletionRates,
+                accuracy: accuracy,
+                wpm: wpm,
+                speedScore: parseFloat(speedScore.toFixed(1)),
+                duration: TEST_DURATION,
+                completedTime: new Date().toISOString()
+            };
+            
+            sessionStorage.setItem('studentData', JSON.stringify(studentData));
+            
+            // 計算總分
+            const examScore = studentData.examResult.score;
+            const totalScore = examScore + (wpm / 2);
+            
+            // 儲存到 Firebase
+            const studentKey = `${studentData.class}_${studentData.number}_${studentData.name}`;
+            
+            const kingBadge = maxValue >= 80 ? `\n🏆 ${topCategoryName}之王！` : '';
+            
+            try {
+                // 儲存完整資料到 exams
+                await set(ref(database, `exams/${studentKey}`), {
+                    name: studentData.name,
+                    class: studentData.class,
+                    number: studentData.number,
+                    examResult: studentData.examResult,
+                    typingResult: studentData.typingResult,
+                    loginTime: studentData.loginTime
+                });
+                
+                // 儲存到排行榜
+                await set(ref(database, `leaderboard/${studentKey}`), {
+                    name: studentData.name,
+                    class: studentData.class,
+                    number: parseInt(studentData.number),
+                    examScore: examScore,
+                    typingWPM: wpm,
+                    typingAccuracy: accuracy,
+                    typingOverallScore: overallScore,
+                    totalScore: Math.round(totalScore),
+                    completedTime: new Date().toISOString()
+                });
+                
+                alert(`⏰ 打字測驗完成！\n\n🏆 綜合分數：${overallScore.toFixed(0)} 分${kingBadge}\n\n📊 各項指標：\n完成率：${completionRate.toFixed(1)}%\n正確率：${accuracy.toFixed(1)}%\n速度：${wpm} 字/分\n\n完成輪數：${rounds} 輪\n總字數：${chars} 字\n錯字數：${errors.toFixed(1)} 字\n已用時間：${Math.floor(elapsedSeconds / 60)} 分 ${elapsedSeconds % 60} 秒\n\n即將前往排行榜...`);
+                window.location.href = 'reward.html';
+            } catch (error) {
+                console.error('儲存失敗:', error);
+                alert('儲存成績時發生錯誤，請聯絡老師');
+            }
+        }
+        
+        // 提交按鈕事件
+        document.getElementById('submitBtn').addEventListener('click', () => {
+            // 停止所有計時器
+            if (timerInterval) clearInterval(timerInterval);
+            if (elapsedTimerInterval) clearInterval(elapsedTimerInterval);
+            
+            // 計算最終統計 - 速度只計算正確的字
+            const correctChars = totalChars - totalErrors;
+            const finalWPM = elapsedSeconds > 0 
+                ? Math.round((correctChars / elapsedSeconds) * 60)
+                : 0;
+            const finalAccuracy = totalChars > 0 
+                ? ((totalChars - totalErrors) / totalChars * 100)
+                : 100;
+            
+            const avgCompletionRate = roundCompletionRates.length > 0
+                ? (roundCompletionRates.reduce((sum, rate) => sum + rate, 0) / roundCompletionRates.length)
+                : 0;
+            
+            const speedScore = Math.min((finalWPM / 60) * 100, 100);
+            const overallScore = (avgCompletionRate * 0.333 + finalAccuracy * 0.333 + speedScore * 0.333);
+            
+            // 找出最強項
+            const scores = {
+                '完成率': avgCompletionRate,
+                '正確率': finalAccuracy,
+                '速度': speedScore
+            };
+            let maxCategory = '';
+            let maxValue = 0;
+            for (let [category, value] of Object.entries(scores)) {
+                if (value > maxValue) {
+                    maxValue = value;
+                    maxCategory = category;
+                }
+            }
+            
+            submitTypingResult(roundCount, totalChars, totalErrors, avgCompletionRate, finalAccuracy, finalWPM, speedScore, overallScore, maxCategory);
+        });
+    </script>
+</body>
+</html>

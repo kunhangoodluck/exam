@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>排行榜 - Scratch 期末測驗</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="leaderboard-container fade-in">
+            <h1 style="text-align: center; color: var(--primary-color); margin-bottom: 30px;">
+                🏆 測驗排行榜
+            </h1>
+            
+            <div class="leaderboard-tabs">
+                <button class="tab active" data-tab="class">班級排行</button>
+                <button class="tab" data-tab="school">校園排行</button>
+                <button class="tab" data-tab="typing">打字排行</button>
+            </div>
+            
+            <div id="classLeaderboard" class="leaderboard-content">
+                <h2 style="margin-bottom: 20px;">班級排行榜</h2>
+                <div style="margin-bottom: 15px;">
+                    <select id="classFilter" style="padding: 10px; font-size: 16px; border-radius: 8px; border: 2px solid #e0e0e0;">
+                        <option value="">選擇班級</option>
+                        <option value="五年一班">五年一班</option>
+                        <option value="五年二班">五年二班</option>
+                        <option value="五年三班">五年三班</option>
+                        <option value="五年四班">五年四班</option>
+                        <option value="五年五班">五年五班</option>
+                        <option value="五年六班">五年六班</option>
+                        <option value="五年七班">五年七班</option>
+                        <option value="五年八班">五年八班</option>
+                        <option value="五年九班">五年九班</option>
+                    </select>
+                </div>
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>排名</th>
+                            <th>座號</th>
+                            <th>姓名</th>
+                            <th>測驗分數</th>
+                            <th>打字速度</th>
+                            <th>正確率</th>
+                            <th>綜合分數</th>
+                        </tr>
+                    </thead>
+                    <tbody id="classTableBody">
+                        <tr><td colspan="7" style="text-align: center; padding: 40px;">請選擇班級</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div id="schoolLeaderboard" class="leaderboard-content" style="display: none;">
+                <h2 style="margin-bottom: 20px;">校園總排行榜</h2>
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>排名</th>
+                            <th>班級</th>
+                            <th>姓名</th>
+                            <th>測驗分數</th>
+                            <th>打字速度</th>
+                            <th>正確率</th>
+                            <th>綜合分數</th>
+                        </tr>
+                    </thead>
+                    <tbody id="schoolTableBody">
+                        <tr><td colspan="7" style="text-align: center; padding: 40px;">載入中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div id="typingLeaderboard" class="leaderboard-content" style="display: none;">
+                <h2 style="margin-bottom: 20px;">打字速度排行榜</h2>
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>排名</th>
+                            <th>班級</th>
+                            <th>姓名</th>
+                            <th>打字速度</th>
+                            <th>正確率</th>
+                            <th>總字數</th>
+                        </tr>
+                    </thead>
+                    <tbody id="typingTableBody">
+                        <tr><td colspan="6" style="text-align: center; padding: 40px;">載入中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="navigation-buttons" style="margin-top: 30px;">
+                <button onclick="window.location.href='index.html'" class="btn-secondary">回到首頁</button>
+            </div>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        import { firebaseConfig } from './js/firebase-config.js';
+        
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        
+        let allData = [];
+        
+        // 載入所有資料
+        const leaderboardRef = ref(database, 'leaderboard');
+        onValue(leaderboardRef, (snapshot) => {
+            allData = [];
+            snapshot.forEach((childSnapshot) => {
+                allData.push(childSnapshot.val());
+            });
+            
+            // 初始載入校園排行榜
+            updateSchoolLeaderboard();
+            updateTypingLeaderboard();
+        });
+        
+        // 切換分頁
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                // 移除所有 active class
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.leaderboard-content').forEach(c => c.style.display = 'none');
+                
+                // 添加 active class
+                this.classList.add('active');
+                const tabName = this.dataset.tab;
+                
+                if (tabName === 'class') {
+                    document.getElementById('classLeaderboard').style.display = 'block';
+                } else if (tabName === 'school') {
+                    document.getElementById('schoolLeaderboard').style.display = 'block';
+                    updateSchoolLeaderboard();
+                } else if (tabName === 'typing') {
+                    document.getElementById('typingLeaderboard').style.display = 'block';
+                    updateTypingLeaderboard();
+                }
+            });
+        });
+        
+        // 班級篩選
+        document.getElementById('classFilter').addEventListener('change', function() {
+            const selectedClass = this.value;
+            if (!selectedClass) {
+                document.getElementById('classTableBody').innerHTML = 
+                    '<tr><td colspan="7" style="text-align: center; padding: 40px;">請選擇班級</td></tr>';
+                return;
+            }
+            
+            const classData = allData
+                .filter(student => student.class === selectedClass)
+                .sort((a, b) => (b.totalScore || 0) - (a.totalScore || 0));
+            
+            if (classData.length === 0) {
+                document.getElementById('classTableBody').innerHTML = 
+                    '<tr><td colspan="7" style="text-align: center; padding: 40px;">此班級尚無成績資料</td></tr>';
+                return;
+            }
+            
+            document.getElementById('classTableBody').innerHTML = classData
+                .map((student, index) => `
+                    <tr>
+                        <td>
+                            <span class="rank-badge ${getRankClass(index + 1)}">
+                                ${index + 1}
+                            </span>
+                        </td>
+                        <td>${student.number || '-'}</td>
+                        <td>${student.name}</td>
+                        <td>${student.examScore || 0} 分</td>
+                        <td>${student.typingWPM || 0} 字/分</td>
+                        <td>${student.typingAccuracy || 0}%</td>
+                        <td><strong>${(student.totalScore || 0).toFixed(1)}</strong></td>
+                    </tr>
+                `).join('');
+        });
+        
+        // 更新校園排行榜
+        function updateSchoolLeaderboard() {
+            const sortedData = [...allData]
+                .sort((a, b) => (b.totalScore || 0) - (a.totalScore || 0))
+                .slice(0, 50); // 只顯示前50名
+            
+            if (sortedData.length === 0) {
+                document.getElementById('schoolTableBody').innerHTML = 
+                    '<tr><td colspan="7" style="text-align: center; padding: 40px;">尚無成績資料</td></tr>';
+                return;
+            }
+            
+            document.getElementById('schoolTableBody').innerHTML = sortedData
+                .map((student, index) => `
+                    <tr>
+                        <td>
+                            <span class="rank-badge ${getRankClass(index + 1)}">
+                                ${index + 1}
+                            </span>
+                        </td>
+                        <td>${student.class}</td>
+                        <td>${student.name}</td>
+                        <td>${student.examScore || 0} 分</td>
+                        <td>${student.typingWPM || 0} 字/分</td>
+                        <td>${student.typingAccuracy || 0}%</td>
+                        <td><strong>${(student.totalScore || 0).toFixed(1)}</strong></td>
+                    </tr>
+                `).join('');
+        }
+        
+        // 更新打字排行榜
+        function updateTypingLeaderboard() {
+            const sortedData = [...allData]
+                .sort((a, b) => (b.typingWPM || 0) - (a.typingWPM || 0))
+                .slice(0, 50);
+            
+            if (sortedData.length === 0) {
+                document.getElementById('typingTableBody').innerHTML = 
+                    '<tr><td colspan="6" style="text-align: center; padding: 40px;">尚無成績資料</td></tr>';
+                return;
+            }
+            
+            document.getElementById('typingTableBody').innerHTML = sortedData
+                .map((student, index) => `
+                    <tr>
+                        <td>
+                            <span class="rank-badge ${getRankClass(index + 1)}">
+                                ${index + 1}
+                            </span>
+                        </td>
+                        <td>${student.class}</td>
+                        <td>${student.name}</td>
+                        <td><strong>${student.typingWPM || 0}</strong> 字/分</td>
+                        <td>${student.typingAccuracy || 0}%</td>
+                        <td>${student.typingResult?.totalChars || 0} 字</td>
+                    </tr>
+                `).join('');
+        }
+        
+        // 取得排名樣式
+        function getRankClass(rank) {
+            if (rank === 1) return 'rank-1';
+            if (rank === 2) return 'rank-2';
+            if (rank === 3) return 'rank-3';
+            return 'rank-other';
+        }
+    </script>
+</body>
+</html>
